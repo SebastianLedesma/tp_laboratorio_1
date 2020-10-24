@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../inc/LinkedList.h"
+#include "LinkedList.h"
 
 static Node* getNode(LinkedList* this, int nodeIndex);
 static int addNode(LinkedList* this, int nodeIndex,void* pElement);
@@ -53,19 +53,23 @@ int ll_len(LinkedList* this)
  */
 static Node* getNode(LinkedList* this, int nodeIndex)
 {
-    Node* pNode = NULL;
+    Node* pAux = NULL;
 
-    if(this != NULL && nodeIndex >= 0 && nodeIndex < ll_len(this)){
-        pNode = this->pFirstNode;
-
-        if(nodeIndex != 0){
-            while(pNode->pNextNode != NULL && nodeIndex > 0){
-                pNode = pNode->pNextNode;
+    if(this != NULL && nodeIndex >=0 && nodeIndex < ll_len(this))
+    {
+        pAux=this->pFirstNode;
+        if(nodeIndex!=0)
+        {
+            while(pAux->pNextNode!=NULL)
+            {
+                pAux=pAux->pNextNode;
                 nodeIndex--;
+                if(nodeIndex==0)
+                    break;
             }
         }
     }
-    return pNode;
+    return pAux;
 }
 
 /** \brief  Permite realizar el test de la funcion getNode la cual es privada
@@ -154,7 +158,6 @@ int test_addNode(LinkedList* this, int nodeIndex,void* pElement)
 int ll_add(LinkedList* this, void* pElement)
 {
     int retorno = -1;
-    int indice = 0;
 
     if(this != NULL && addNode(this,ll_len(this),pElement)== 0){
         retorno = 0;
@@ -202,7 +205,7 @@ int ll_set(LinkedList* this, int index,void* pElement)
     int retorno = -1;
     Node* actual = NULL;
 
-    if(this != NULL && index >= 0 && index <= ll_len(this)){
+    if(this != NULL && index >= 0 && index < ll_len(this)){
         actual = getNode(this,index);
 
         if(actual != NULL){
@@ -226,30 +229,26 @@ int ll_set(LinkedList* this, int index,void* pElement)
 int ll_remove(LinkedList* this,int index)
 {
     int retorno = -1;
-    Node* actual;
-    Node* prev;
 
-    if(this != NULL && index >= 0 && index <= ll_len(this)){
-        actual = getNode(this,index);
+    if(this != NULL && index >= 0 && index < ll_len(this))
+    {
+        if(index == 0 && this->pFirstNode != NULL)
+        {
+            this->pFirstNode = getNode(this, index)->pNextNode;
+            free(getNode(this, index));
 
-        if(actual != NULL){
-            if(this->pFirstNode != NULL && index == 0){
-                this->pFirstNode = actual->pNextNode;
-
-            }else if(index > 0 && index < ll_len(this)){
-                prev = getNode(this,index - 1);
-                prev->pNextNode = actual->pNextNode;
-            }else if(index == ll_len(this)){
-                prev = getNode(this,index - 1);
-                prev->pNextNode=NULL;
-            }
-
-            free(actual);
-            this->size-=1;
-            retorno=0;
+        }else if(index > 0 && index < ll_len(this) && getNode(this, index) != NULL && getNode(this, index-1) != NULL){
+            getNode(this, index-1)->pNextNode = getNode(this, index)->pNextNode;
+            free(getNode(this,index));
         }
+        /*else{
+            getNode(this, index-1)->pNextNode = NULL;
+            free(getNode(this, index));
+        }
+        */
+        this->size--;
+        retorno = 0;
     }
-
 
     return retorno;
 }
@@ -266,17 +265,15 @@ int ll_clear(LinkedList* this)
 {
     int retorno = -1;
     int i;
-    int longitud;
 
-    longitud = ll_len(this);
-
-    if(this != NULL){
-        for(i=0; i < longitud;i++){
-            ll_remove(this,i);
+    if(this != NULL)
+    {
+        for(i=ll_len(this); i > 0 ; i--)
+        {
+            ll_remove(this, ll_len(this)-1);
         }
-        retorno=0;
+        retorno = 0;
     }
-
     return retorno;
 }
 
@@ -292,11 +289,14 @@ int ll_deleteLinkedList(LinkedList* this)
 {
     int retorno = -1;
 
-    if(this != NULL && ll_clear(this) == 0){
-        free(this);
-        retorno = 0;
+    if(this != NULL)
+    {
+        if(ll_clear(this)==0)
+        {
+            free(this);
+            retorno = 0;
+        }
     }
-
     return retorno;
 }
 
@@ -390,7 +390,6 @@ int ll_push(LinkedList* this, int index, void* pElement)
 void* ll_pop(LinkedList* this,int index)
 {
     void* retorno = NULL;
-    Node* nodo;
 
     if(this != NULL && index >= 0 && index <= ll_len(this)){
         retorno=ll_get(this,index);
@@ -415,7 +414,6 @@ int ll_contains(LinkedList* this, void* pElement)
 {
     int retorno = -1;
     int longitud;
-    int i;
 
     longitud = ll_len(this);
 
@@ -555,3 +553,29 @@ int ll_sort(LinkedList* this, int (*pFunc)(void*,void*), int order)
     return retorno;
 }
 
+
+/** \brief Funcion que filtra una lista y retorna un puntero a una nueva LinkedList.
+ *
+ * \param *fn Puntero a funcion que establecera el citerio de filtrado de la lista pasado por parametro.
+ * \param LinkedList* Puntero a la lista a filtrar.
+ *\return Retorna un puntero a la nueva lista filtrada o NULL si hubo error.
+ */
+LinkedList* ll_filter(LinkedList* this,int (*fn)(void*)){
+    int i;
+    int longitud;
+    void* pAux;
+    LinkedList* pLista = NULL;
+
+    if(this != NULL){
+        longitud = ll_len(this);
+        pLista = ll_newLinkedList();
+        for(i=0 ; i < longitud; i++){
+            pAux = ll_get(this,i);
+            if(pAux != NULL && fn(pAux)){
+                ll_add(pLista,pAux);
+            }
+        }
+    }
+
+    return pLista;
+}
